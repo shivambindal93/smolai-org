@@ -1,8 +1,8 @@
 import modal
 import os
-from constants import DEFAULT_DIR, DEFAULT_MODEL, DEFAULT_MAX_TOKENS, EXTENSION_TO_SKIP
 
 stub = modal.Stub("smol-debugger-v1")
+generatedDir = "generated"
 openai_image = modal.Image.debian_slim().pip_install("openai")
 
 
@@ -12,21 +12,22 @@ def read_file(filename):
         return file.read()
 
 def walk_directory(directory):
+    image_extensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.ico', '.tif', '.tiff']
     code_contents = {}
-    for dirpath, _, filenames in os.walk(directory):
-        for filename in filenames:
-            if not any(filename.endswith(ext) for ext in EXTENSION_TO_SKIP):
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            if not any(file.endswith(ext) for ext in image_extensions):
                 try:
-                    relative_filepath = os.path.relpath(os.path.join(dirpath, filename), directory)
-                    code_contents[relative_filepath] = read_file(os.path.join(dirpath, filename))
+                    relative_filepath = os.path.relpath(os.path.join(root, file), directory)
+                    code_contents[relative_filepath] = read_file(os.path.join(root, file))
                 except Exception as e:
-                    code_contents[relative_filepath] = f"Error reading file {filename}: {str(e)}"
+                    code_contents[relative_filepath] = f"Error reading file {file}: {str(e)}"
     return code_contents
 
 
 
 @stub.local_entrypoint()
-def main(prompt, directory=DEFAULT_DIR, model="gpt-3.5-turbo"):
+def main(prompt, directory=generatedDir, model="gpt-3.5-turbo"):
   code_contents = walk_directory(directory)
 
   # Now, `code_contents` is a dictionary that contains the content of all your non-image files
